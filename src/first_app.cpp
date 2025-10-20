@@ -1,8 +1,8 @@
 #include "first_app.hpp"
 
-#include "keyboard_movement_controller.hpp"
-#include "lve_buffer.hpp"
-#include "lve_camera.hpp"
+#include "lve/lve_buffer.hpp"
+#include "lve/lve_camera.hpp"
+#include "movement_controller.hpp"
 #include "systems/point_light_system.hpp"
 #include "systems/simple_render_system.hpp"
 
@@ -68,7 +68,7 @@ void FirstApp::run() {
 
   auto viewerObject = LveGameObject::createGameObject();
   viewerObject.transform.translation.z = -2.5f;
-  KeyboardMovementController cameraController{};
+  MovementController cameraController{};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
   while (!lveWindow.shouldClose()) {

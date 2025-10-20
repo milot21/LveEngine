@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lve_device.hpp"
+#include "lve/lve_device.hpp"
 
 // vulkan headers
 #include <vulkan/vulkan.h>
