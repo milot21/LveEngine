@@ -21,6 +21,11 @@ struct SimplePushConstantData {
 SimpleRenderSystem::SimpleRenderSystem(
     LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout)
     : lveDevice{device} {
+  //text desc set layout
+  textureSetLayout = LveDescriptorSetLayout::Builder(lveDevice)
+                         .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                         .build();
+
   createPipelineLayout(globalSetLayout);
   createPipeline(renderPass);
 }
@@ -35,7 +40,12 @@ void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLay
   pushConstantRange.offset = 0;
   pushConstantRange.size = sizeof(SimplePushConstantData);
 
-  std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout};
+//   Create temporary texture set layout for pipeline creation
+//  auto tempTextureSetLayout = LveDescriptorSetLayout::Builder(lveDevice)
+//                                  .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+//                                  .build();
+
+  std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout, textureSetLayout->getDescriptorSetLayout()};
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -79,6 +89,30 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
   for (auto& kv : frameInfo.gameObjects) {
     auto& obj = kv.second;
     if (obj.model == nullptr) continue;
+
+    // Bind texture descriptor if object has a texture
+    if (obj.texture != nullptr) {
+      VkDescriptorImageInfo imageInfo{};
+      imageInfo.sampler = obj.texture->getSampler();
+      imageInfo.imageView = obj.texture->getImageView();
+      imageInfo.imageLayout = obj.texture->getImageLayout();
+
+      VkDescriptorSet textureDescriptorSet;
+      LveDescriptorWriter(*textureSetLayout, frameInfo.frameDescriptorPool)
+          .writeImage(0, &imageInfo)
+          .build(textureDescriptorSet);
+
+      vkCmdBindDescriptorSets(
+          frameInfo.commandBuffer,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          pipelineLayout,
+          1,  // Set 1 is for texture
+          1,
+          &textureDescriptorSet,
+          0,
+          nullptr);
+    }
+
     SimplePushConstantData push{};
     push.modelMatrix = obj.transform.mat4();
     push.normalMatrix = obj.transform.normalMatrix();
