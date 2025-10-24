@@ -152,7 +152,7 @@ void FirstApp::loadGameObjects() {
   auto floorTexture = std::make_shared<Texture>(lveDevice, "../textures/road.jpg");
   auto benchT = std::make_shared<Texture>(lveDevice, "../textures/bench/germany010.jpg");
 
-  try {
+  //BENCH
     std::shared_ptr<LveModel> benchModel =
         LveModel::createModelFromFile(lveDevice, "models/objBench.obj"); // Adjust filename as needed
     auto bench = LveGameObject::createGameObject();
@@ -162,17 +162,14 @@ void FirstApp::loadGameObjects() {
     bench.transform.rotation = {glm::pi<float>(), 0.f, 0.f};
     bench.transform.scale = {0.25f, 0.25f, 0.25f}; // Adjust scale as needed
     gameObjects.emplace(bench.getId(), std::move(bench));
-  } catch (const std::exception& e) {
-    std::cerr << "Failed to load bench: " << e.what() << std::endl;
-  }
 
   //TRASH CAN
   std::shared_ptr<LveModel> binOBJ =
       LveModel::createModelFromFile(lveDevice, "models/outdoorBin.obj");
   auto trashCan = LveGameObject::createGameObject();
   trashCan.model = binOBJ;
-  //trashCan.texture = vaseTexture;
-  trashCan.transform.translation = {1.7f, .0f, 0.f};
+  //trashCan.texture = defTexture;
+  trashCan.transform.translation = {1.7f, .03f, 0.f};
   trashCan.transform.rotation = {glm::pi<float>(), 0.f, 0.f};
   trashCan.transform.scale = {0.005f, 0.005f, 0.005f};
   gameObjects.emplace(trashCan.getId(), std::move(trashCan));
