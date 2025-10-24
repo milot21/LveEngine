@@ -53,8 +53,6 @@ void FirstApp::run() {
           .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
           .build();
 
-  //Texture texture = Texture(lveDevice, "../textures/meme.png");
-
   // Frame descriptor pool (for per-object textures)
   std::vector<std::unique_ptr<LveDescriptorPool>> framePools(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
   for (int i = 0; i < framePools.size(); i++) {
@@ -168,6 +166,7 @@ void FirstApp::loadGameObjects() {
     std::cerr << "Failed to load bench: " << e.what() << std::endl;
   }
 
+  //TRASH CAN
   std::shared_ptr<LveModel> binOBJ =
       LveModel::createModelFromFile(lveDevice, "models/outdoorBin.obj");
   auto trashCan = LveGameObject::createGameObject();
@@ -176,9 +175,9 @@ void FirstApp::loadGameObjects() {
   trashCan.transform.translation = {1.7f, .0f, 0.f};
   trashCan.transform.rotation = {glm::pi<float>(), 0.f, 0.f};
   trashCan.transform.scale = {0.005f, 0.005f, 0.005f};
-
   gameObjects.emplace(trashCan.getId(), std::move(trashCan));
 
+  //VASE WITH TEXTURE
   std::shared_ptr<LveModel> flat_vase =
       LveModel::createModelFromFile(lveDevice, "models/flat_vase.obj");
   auto flatVase = LveGameObject::createGameObject();
@@ -188,14 +187,7 @@ void FirstApp::loadGameObjects() {
   flatVase.transform.scale = {3.f, 1.5f, 3.f};
   gameObjects.emplace(flatVase.getId(), std::move(flatVase));
 
-  /*lveModel = LveModel::createModelFromFile(lveDevice, "models/smooth_vase.obj");
-  auto smoothVase = LveGameObject::createGameObject();
-  smoothVase.model = lveModel;
-  smoothVase.texture = defTexture;
-  smoothVase.transform.translation = {.5f, .5f, 0.f};
-  smoothVase.transform.scale = {3.f, 1.5f, 3.f};
-  gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));*/
-
+  //LAMPS FOR EACH CORNER
     //bottom right corner
     std::shared_ptr<LveModel> Lamp = LveModel::createModelFromFile(lveDevice, "models/Street_Lamp.obj");
     auto lamp = LveGameObject::createGameObject();
@@ -236,6 +228,7 @@ void FirstApp::loadGameObjects() {
     lamp4.transform.scale = {0.01f, 0.01f, 0.01f};
     gameObjects.emplace(lamp4.getId(), std::move(lamp4));
 
+    //PATH FLOOR
     std::shared_ptr<LveModel> Quad= LveModel::createModelFromFile(lveDevice, "models/quad.obj");
   auto floor = LveGameObject::createGameObject();
   floor.model = Quad;
@@ -244,25 +237,7 @@ void FirstApp::loadGameObjects() {
   floor.transform.scale = {3.f, 1.f, 3.f};
   gameObjects.emplace(floor.getId(), std::move(floor));
 
- /* std::vector<glm::vec3> lightColors{
-      {1.f, .1f, .1f},
-      {.1f, .1f, 1.f},
-      {.1f, 1.f, .1f},
-      {1.f, 1.f, .1f},
-      {.1f, 1.f, 1.f},
-      {1.f, 1.f, 1.f}  //
-  };
-
-  for (int i = 0; i < lightColors.size(); i++) {
-    auto pointLight = LveGameObject::makePointLight(0.2f);
-    pointLight.color = lightColors[i];
-    auto rotateLight = glm::rotate(
-        glm::mat4(1.f),
-        (i * glm::two_pi<float>()) / lightColors.size(),
-        {0.f, -1.f, 0.f});
-    pointLight.transform.translation = glm::vec3(rotateLight * glm::vec4(-1.f, -1.f, -1.f, 1.f));
-    gameObjects.emplace(pointLight.getId(), std::move(pointLight));
-  }*/
+  //LAMP LIGHTS BELOW/////////////////////////////////////
 
   // bottom right
   auto lampLightRight = LveGameObject::makePointLight(3.0f);  // Bright
@@ -279,7 +254,6 @@ void FirstApp::loadGameObjects() {
   lamp2LightRight.color = {1.f, 0.9f, 0.8f};
   lamp2LightRight.transform.translation = {2.5f, -2.3f, -2.9f};  // Positive X
   gameObjects.emplace(lamp2LightRight.getId(), std::move(lamp2LightRight));
-
   auto lamp2LightLeft = LveGameObject::makePointLight(3.0f);
   lamp2LightLeft.color = {1.f, 0.9f, 0.8f};
   lamp2LightLeft.transform.translation = {3.275f, -2.3f, -2.9f};  // Positive X
@@ -290,7 +264,6 @@ void FirstApp::loadGameObjects() {
   lamp3LightRight.color = {1.f, 0.9f, 0.8f};
   lamp3LightRight.transform.translation = {-2.55f, -2.3f, 2.9f};  // Positive Z
   gameObjects.emplace(lamp3LightRight.getId(), std::move(lamp3LightRight));
-
   auto lamp3LightLeft = LveGameObject::makePointLight(3.0f);
   lamp3LightLeft.color = {1.f, 0.9f, 0.8f};
   lamp3LightLeft.transform.translation = {-3.275f, -2.3f, 2.9f};  // Positive Z
@@ -301,7 +274,6 @@ void FirstApp::loadGameObjects() {
   lamp4LightRight.color = {1.f, 0.9f, 0.8f};
   lamp4LightRight.transform.translation = {2.5f, -2.3f, 2.9f};  // Positive X and Z
   gameObjects.emplace(lamp4LightRight.getId(), std::move(lamp4LightRight));
-
   auto lamp4LightLeft = LveGameObject::makePointLight(3.0f);
   lamp4LightLeft.color = {1.f, 0.9f, 0.8f};
   lamp4LightLeft.transform.translation = {3.275f, -2.3f, 2.9f};  // Positive X and Z

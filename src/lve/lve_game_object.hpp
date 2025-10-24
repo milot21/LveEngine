@@ -12,6 +12,9 @@
 
 namespace lve {
 
+/**
+ * handles position, rotation, and scale of game objects
+ */
 struct TransformComponent {
   glm::vec3 translation{};
   glm::vec3 scale{1.f, 1.f, 1.f};
@@ -22,18 +25,20 @@ struct TransformComponent {
   // https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
   glm::mat4 mat4();
 
+  //used to correctly transform normals for lighting calculations
   glm::mat3 normalMatrix();
 };
 
 struct PointLightComponent {
-  float lightIntensity = 1.0f;
+  float lightIntensity = 1.0f;  //brightness multiplier
 };
-
+// 3d models that can have textures, transformations, a point of light, color
 class LveGameObject {
  public:
   using id_t = unsigned int;
   using Map = std::unordered_map<id_t, LveGameObject>;
 
+  //factory method to create a new game object with unique ID
   static LveGameObject createGameObject() {
     static id_t currentId = 0;
     return LveGameObject{currentId++};
@@ -54,12 +59,12 @@ class LveGameObject {
 
   // Optional pointer components
   std::shared_ptr<LveModel> model{};
-  std::shared_ptr<Texture> texture{};
-  std::unique_ptr<PointLightComponent> pointLight = nullptr;
+  std::shared_ptr<Texture> texture{};// image data for surface, shareable
+  std::unique_ptr<PointLightComponent> pointLight = nullptr; // not shareable
 
  private:
   LveGameObject(id_t objId) : id{objId} {}
 
-  id_t id;
+  id_t id; // unique identifier
 };
 }  // namespace lve

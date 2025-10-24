@@ -45,6 +45,7 @@ void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLay
 //                                  .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 //                                  .build();
 
+  //define pipeline layout with both sets, global data, texture
   std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout, textureSetLayout->getDescriptorSetLayout()};
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -92,6 +93,7 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
 
     // Bind texture descriptor if object has a texture
     if (obj.texture != nullptr) {
+      //create descriptor pointing to this objects texture
       VkDescriptorImageInfo imageInfo{};
       imageInfo.sampler = obj.texture->getSampler();
       imageInfo.imageView = obj.texture->getImageView();

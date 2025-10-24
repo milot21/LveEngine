@@ -32,6 +32,7 @@ Texture::Texture(LveDevice &device, const std::string &filepath) : lveDevice{dev
 
   imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
+  //IMAGE INFORMATION
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -43,18 +44,21 @@ Texture::Texture(LveDevice &device, const std::string &filepath) : lveDevice{dev
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   imageInfo.extent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
-  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; //flags
 
 
+  //create and allocate gpu memory
   lveDevice.createImageWithInfo(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, imageMemory);
 
   transitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+  //to gpu image
   lveDevice.copyBufferToImage(stagingBuffer.getBuffer(), image, static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1);
 
-  generateMipmaps();
+  generateMipmaps(); //create smaller versions of texture for distant rendering
   imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+  //sampler info defines how texture is read, filtering, wrapping
   VkSamplerCreateInfo samplerInfo{};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
   samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -73,6 +77,7 @@ Texture::Texture(LveDevice &device, const std::string &filepath) : lveDevice{dev
 
   vkCreateSampler(lveDevice.device(), &samplerInfo, nullptr, &sampler);
 
+  //image view is how shaders access the image
   VkImageViewCreateInfo imageViewInfo {};
   imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -87,19 +92,25 @@ Texture::Texture(LveDevice &device, const std::string &filepath) : lveDevice{dev
 
   vkCreateImageView(lveDevice.device(), &imageViewInfo, nullptr, &imageView);
 
-  stbi_image_free(data);
+  stbi_image_free(data); // free cpu memory
 }
 
-Texture::~Texture() {
+Texture::~Texture() { //cleanup all vulkan resources
   vkDestroyImage(lveDevice.device(), image, nullptr);
   vkFreeMemory(lveDevice.device(), imageMemory, nullptr);
   vkDestroyImageView(lveDevice.device(), imageView, nullptr);
   vkDestroySampler(lveDevice.device(), sampler, nullptr);
 }
 
+/**
+ * changes image memory layout using a pipeline barrier without modifying pixels
+ * @param oldLayout
+ * @param newLayout
+ */
 void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLayout) {
   VkCommandBuffer commandBuffer = lveDevice.beginSingleTimeCommands();
 
+  //creates the memory barrier to synchronize the transition
   VkImageMemoryBarrier barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.oldLayout = oldLayout;
@@ -107,6 +118,7 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.image = image;
+  //whihc part of image to transition which is all miplevels
   barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel = 0;
   barrier.subresourceRange.levelCount = mipLevels;
@@ -115,7 +127,7 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
 
   VkPipelineStageFlags sourceStage;
   VkPipelineStageFlags destinationStage;
-
+//from undefined to transfer, uploading data to image
   if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -123,6 +135,7 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
     sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
   }
+  //used after upload, prepares for shader access
   else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -134,11 +147,14 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
     throw std::runtime_error("unsupported layout transition!");
   }
 
+  //sumbit barrier command
   vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
+//execute and wait for completion
   lveDevice.endSingleTimeCommands(commandBuffer);
 }
-
+//create smaller versions of the texture for efficient rendering
+//creates new image data
+//this helped because it was flickering at a distance but not since piecing it
 void Texture::generateMipmaps() {
   VkFormatProperties formatProperties;
   vkGetPhysicalDeviceFormatProperties(lveDevice.getPhysicalDevice(), imageFormat, &formatProperties);
@@ -149,6 +165,7 @@ void Texture::generateMipmaps() {
 
   VkCommandBuffer commandBuffer = lveDevice.beginSingleTimeCommands();
 
+  //barrier for transitioning mip levels
   VkImageMemoryBarrier barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.image = image;
@@ -159,9 +176,11 @@ void Texture::generateMipmaps() {
   barrier.subresourceRange.layerCount = 1;
   barrier.subresourceRange.levelCount = 1;
 
+  //dimensions for each level
   int32_t mipWidth = width;
   int32_t mipHeight = height;
 
+  //generate each level by blitting from the previous one
   for (uint32_t i = 1; i < mipLevels; i++) {
     barrier.subresourceRange.baseMipLevel = i - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -184,7 +203,7 @@ void Texture::generateMipmaps() {
     blit.dstSubresource.mipLevel = i;
     blit.dstSubresource.baseArrayLayer = 0;
     blit.dstSubresource.layerCount = 1;
-
+    // Perform the blit with linear filtering (smooth downsampling)
     vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -193,11 +212,12 @@ void Texture::generateMipmaps() {
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
+    // Halve dimensions for next iteration
     if (mipWidth > 1) mipWidth /= 2;
     if (mipHeight > 1) mipHeight /= 2;
   }
 
+  //last level is only written for transition to shader read only
   barrier.subresourceRange.baseMipLevel = mipLevels - 1;
   barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
   barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
