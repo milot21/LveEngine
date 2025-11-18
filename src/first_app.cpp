@@ -6,6 +6,8 @@
 #include "systems/point_light_system.hpp"
 #include "systems/simple_render_system.hpp"
 #include "lve/lve_texture.hpp"
+#include "lve/lve_animation.hpp"
+
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -53,7 +55,7 @@ void FirstApp::run() {
           .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
           .build();
 
-  // Frame descriptor pool (for per-object textures)
+  // Frame descriptor pool for per-object textures
   std::vector<std::unique_ptr<LveDescriptorPool>> framePools(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
   for (int i = 0; i < framePools.size(); i++) {
     framePools[i] = LveDescriptorPool::Builder(lveDevice)
@@ -92,6 +94,7 @@ void FirstApp::run() {
   MovementController cameraController{};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
+  bool keyPressed[3] = {false, false, false};
   while (!lveWindow.shouldClose()) {
     glfwPollEvents();
 
@@ -99,6 +102,38 @@ void FirstApp::run() {
     float frameTime =
         std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
     currentTime = newTime;
+
+        // update all animations
+        for (auto& kv : gameObjects) {
+      auto& obj = kv.second;
+      if (obj.anim) {
+        glm::vec3 t, r, s;
+        obj.anim->update(frameTime, t, r, s);
+        obj.transform.translation = t;
+        obj.transform.rotation = r;
+        obj.transform.scale = s;
+      }
+    }
+
+        // handle - Keys 1,2,3
+        for (int i = 0; i < 3; i++) {
+      int glfwKey = GLFW_KEY_1 + i;
+      int animKey = i + 1;
+
+      if (glfwGetKey(lveWindow.getGLFWwindow(), glfwKey) == GLFW_PRESS) {
+        if (!keyPressed[i]) {
+          keyPressed[i] = true;
+          // Trigger animation on all objects that have this key registered
+          for (auto& kv : gameObjects) {
+            if (kv.second.anim) {
+              kv.second.anim->trigger(animKey);
+            }
+          }
+        }
+      } else {
+        keyPressed[i] = false;
+      }
+    }
 
     cameraController.moveInPlaneXZ(lveWindow.getGLFWwindow(), frameTime, viewerObject);
     camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
@@ -139,7 +174,6 @@ void FirstApp::run() {
       lveRenderer.endFrame();
     }
   }
-
   vkDeviceWaitIdle(lveDevice.device());
 }
 
@@ -152,6 +186,43 @@ void FirstApp::loadGameObjects() {
   auto floorTexture = std::make_shared<Texture>(lveDevice, "../textures/road.jpg");
   auto benchT = std::make_shared<Texture>(lveDevice, "../textures/bench/germany010.jpg");
 
+  // Anim1:Jump
+  Animation jumpAnim(
+      glm::vec3(0.f, 0.f, 0.f),// Start at ground level
+      glm::vec3(0.f),
+      glm::vec3(1.f),
+      glm::vec3(0.f, -2.f, 0.f),// Jump up 2 units
+      glm::vec3(0.f),
+      glm::vec3(1.f),
+      0.8f,     // 0.8 seconds
+      Interp::EASE_OUT
+  );
+
+  // Anim2: 360 Spin Y axis
+  Animation spin360Anim(
+      glm::vec3(0.f),
+      glm::vec3(0.f),// Start rotation
+      glm::vec3(1.f),
+      glm::vec3(0.f),
+      glm::vec3(0.f, glm::two_pi<float>(), 0.f),  // 360 rotation
+      glm::vec3(1.f),
+      2.0f,
+      Interp::LINEAR
+  );
+
+  // Anim3: Swing tilt
+  Animation swingAnim(
+      glm::vec3(0.f),
+      glm::vec3(0.f),
+      glm::vec3(1.f),
+      glm::vec3(0.f),
+      glm::vec3(0.f, 0.f, 0.3f),// Tilt on Z axis
+      glm::vec3(1.f),
+      1.0f,
+      Interp::EASE_IN_OUT
+  );
+
+
   //BENCH
     std::shared_ptr<LveModel> benchModel =
         LveModel::createModelFromFile(lveDevice, "models/objBench.obj"); // Adjust filename as needed
@@ -161,6 +232,15 @@ void FirstApp::loadGameObjects() {
     bench.transform.translation = {0.f, 0.5f, 0.f}; // Centered on the floor
     bench.transform.rotation = {glm::pi<float>(), 0.f, 0.f};
     bench.transform.scale = {0.25f, 0.25f, 0.25f}; // Adjust scale as needed
+    // Initialize animation controller
+    bench.anim = std::make_unique<AnimationController>(
+        bench.transform.translation,
+        bench.transform.rotation,
+        bench.transform.scale
+        );
+
+    bench.anim->registerKey(1, jumpAnim);
+    bench.anim->registerKey(3, swingAnim);
     gameObjects.emplace(bench.getId(), std::move(bench));
 
   //TRASH CAN
@@ -172,6 +252,13 @@ void FirstApp::loadGameObjects() {
   trashCan.transform.translation = {1.7f, .03f, 0.f};
   trashCan.transform.rotation = {glm::pi<float>(), 0.f, 0.f};
   trashCan.transform.scale = {0.005f, 0.005f, 0.005f};
+  trashCan.anim = std::make_unique<AnimationController>(
+      trashCan.transform.translation,
+      trashCan.transform.rotation,
+      trashCan.transform.scale
+  );
+  trashCan.anim->registerKey(2, spin360Anim);
+  trashCan.anim->registerKey(3, swingAnim);
   gameObjects.emplace(trashCan.getId(), std::move(trashCan));
 
   //VASE WITH TEXTURE
@@ -182,6 +269,15 @@ void FirstApp::loadGameObjects() {
   flatVase.texture = vaseTexture;
   flatVase.transform.translation = {-1.7f, .5f, 0.f};
   flatVase.transform.scale = {3.f, 1.5f, 3.f};
+  flatVase.anim = std::make_unique<AnimationController>(
+      flatVase.transform.translation,
+      flatVase.transform.rotation,
+      flatVase.transform.scale
+  );
+
+  flatVase.anim->registerKey(1, jumpAnim);
+  flatVase.anim->registerKey(2, spin360Anim);
+
   gameObjects.emplace(flatVase.getId(), std::move(flatVase));
 
   //LAMPS FOR EACH CORNER

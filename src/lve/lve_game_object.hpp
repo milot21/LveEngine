@@ -2,7 +2,7 @@
 
 #include "lve_model.hpp"
 #include "lve_texture.hpp"
-
+#include "lve_animation.hpp"
 // libs
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -61,6 +61,9 @@ class LveGameObject {
   std::shared_ptr<LveModel> model{};
   std::shared_ptr<Texture> texture{};// image data for surface, shareable
   std::unique_ptr<PointLightComponent> pointLight = nullptr; // not shareable
+
+  // Animation controller
+  std::unique_ptr<AnimationController> anim = nullptr;
 
  private:
   LveGameObject(id_t objId) : id{objId} {}

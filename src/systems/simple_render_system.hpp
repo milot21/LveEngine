@@ -31,6 +31,6 @@ class SimpleRenderSystem {
   std::unique_ptr<LvePipeline> lvePipeline;
   VkPipelineLayout pipelineLayout;
 
-  std::unique_ptr<LveDescriptorSetLayout> textureSetLayout;
+  std::unique_ptr<LveDescriptorSetLayout> textureSetLayout; // Layout for textures
 };
 }  // namespace lve

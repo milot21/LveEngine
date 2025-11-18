@@ -118,7 +118,7 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.image = image;
-  //whihc part of image to transition which is all miplevels
+  //which part of image to transition which is all miplevels
   barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel = 0;
   barrier.subresourceRange.levelCount = mipLevels;
@@ -127,7 +127,7 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
 
   VkPipelineStageFlags sourceStage;
   VkPipelineStageFlags destinationStage;
-//from undefined to transfer, uploading data to image
+  //from undefined to transfer, uploading data to image
   if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -147,7 +147,7 @@ void Texture::transitionImageLayout(VkImageLayout oldLayout, VkImageLayout newLa
     throw std::runtime_error("unsupported layout transition!");
   }
 
-  //sumbit barrier command
+  //submit barrier command
   vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 //execute and wait for completion
   lveDevice.endSingleTimeCommands(commandBuffer);
