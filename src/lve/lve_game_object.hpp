@@ -78,6 +78,7 @@ class LveGameObject {
   glm::mat4 getWorldMatrix(const Map& gameObjects) const;
   glm::vec3 color{};
   TransformComponent transform{};
+  TransformComponent basetransform{}; //original local transform befroe anim
 
   // Optional pointer components
   std::shared_ptr<LveModel> model{};

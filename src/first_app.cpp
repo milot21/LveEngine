@@ -109,9 +109,9 @@ void FirstApp::run() {
       if (obj.anim) {
         glm::vec3 t, r, s;
         obj.anim->update(frameTime, t, r, s);
-        obj.transform.translation = t;
-        obj.transform.rotation = r;
-        obj.transform.scale = s;
+        obj.transform.translation = obj.basetransform.translation + t;
+        obj.transform.rotation = obj.basetransform.rotation + r;
+        obj.transform.scale = obj.basetransform.scale * s;
       }
     }
 
@@ -178,6 +178,18 @@ void FirstApp::run() {
 }
 
 void FirstApp::loadGameObjects() {
+  // Load all body part models
+  std::shared_ptr<LveModel> torsoHead =
+      LveModel::createModelFromFile(lveDevice, "models/Hierarchical_char/head_torso.obj");
+  std::shared_ptr<LveModel> lArm =
+      LveModel::createModelFromFile(lveDevice, "models/Hierarchical_char/right_arm.obj");
+  std::shared_ptr<LveModel> rArm =
+      LveModel::createModelFromFile(lveDevice, "models/Hierarchical_char/left_arm.obj");
+  std::shared_ptr<LveModel> lLeg =
+      LveModel::createModelFromFile(lveDevice, "models/Hierarchical_char/left_leg.obj");
+  std::shared_ptr<LveModel> rLeg =
+      LveModel::createModelFromFile(lveDevice, "models/Hierarchical_char/right_leg.obj");
+
   //defualt texture
   auto defTexture = std::make_shared<Texture>(lveDevice, "../textures/grey.png");
   //load textures
@@ -221,6 +233,102 @@ void FirstApp::loadGameObjects() {
       1.0f,
       Interp::EASE_IN_OUT
   );
+  // Animation for left arm swing
+  Animation armSwingAnim(
+      glm::vec3(0.f),
+      glm::vec3(0.f),
+      glm::vec3(1.f),
+      glm::vec3(0.f),
+      glm::vec3(-0.8f, 0.f, 0.f), //swing arm forward 45°
+      glm::vec3(1.f),
+      1.0f,
+      Interp::EASE_IN_OUT
+  );
+
+  // PARENT: torso and head
+  auto torso = LveGameObject::createGameObject();
+  torso.model = torsoHead;
+  torso.texture = defTexture;  // Use one of your existing textures
+  glm::vec3 torsoWorld = {0.f, -1.f, -1.f};
+  torso.transform.translation = torsoWorld;  // World position
+  torso.transform.scale = {0.1f, 0.1f, 0.1f};      // Adjust if too big/small
+  torso.transform.rotation = {glm::pi<float>(), 0.f, 0.f};
+  torso.basetransform = torso.transform;
+  torso.anim = std::make_unique<AnimationController>(
+      glm::vec3(0.f),  // Animation offset from base
+      glm::vec3(0.f),
+      glm::vec3(1.f)   // Scale multiplier
+  );
+  torso.anim->registerKey(1, jumpAnim);
+  auto torsoId = torso.getId();
+  gameObjects.emplace(torsoId, std::move(torso));
+
+   //CHILD: left leg
+  auto ll = LveGameObject::createGameObject();
+  ll.model = lLeg;
+  ll.texture = defTexture;  // Use one of your existing textures
+  glm::vec3 llLocal ={0.f, -1.f, -1.f};
+  ll.transform.translation = llLocal - torsoWorld;  // World position
+  ll.transform.scale = {0.1f, 0.1f, 0.1f};      // Adjust if too big/small
+  ll.transform.rotation = {0.f, 0.f, 0.f};
+  ll.basetransform = ll.transform;
+
+  ll.setParent(torsoId);
+  auto llId = ll.getId();
+  gameObjects.emplace(llId, std::move(ll));
+  gameObjects.at(torsoId).addchild(llId);
+
+  //CHILD: right leg
+  auto rl = LveGameObject::createGameObject();
+  rl.model = rLeg;
+  rl.texture = defTexture;  // Use one of your existing textures
+  glm::vec3 rlLocal ={0.f, -1.f, -1.f};
+  rl.transform.translation = rlLocal - torsoWorld;  // World position
+  rl.transform.scale = {0.1f, 0.1f, 0.1f};      // Adjust if too big/small
+  rl.transform.rotation = {0.f, 0.f, 0.f};
+  rl.basetransform = rl.transform;
+
+  rl.setParent(torsoId);
+  auto rlId = rl.getId();
+  gameObjects.emplace(rlId, std::move(rl));
+  gameObjects.at(torsoId).addchild(rlId);
+
+  //CHILD: left arm
+  auto la = LveGameObject::createGameObject();
+  la.model = lArm;
+  la.texture = defTexture;  // Use one of your existing textures
+  glm::vec3 laLocal = {0.f, -1.f, -1.f};
+  la.transform.translation = laLocal - torsoWorld;  // World position
+  la.transform.scale = {0.1f, 0.1f, 0.1f};      // Adjust if too big/small
+  la.transform.rotation = {0.f, 0.f, 0.f};
+  la.basetransform = la.transform;
+
+  la.setParent(torsoId);
+  auto laId = la.getId();
+  gameObjects.emplace(laId, std::move(la));
+  gameObjects.at(torsoId).addchild(laId);
+
+  //CHILD: right arm
+  auto ra = LveGameObject::createGameObject();
+  ra.model = rArm;
+  ra.texture = defTexture;  // Use one of your existing textures
+  glm::vec3 raLocal = {0.f, -1.f, -1.f};
+  ra.transform.translation = raLocal - torsoWorld;  // World position
+  ra.transform.scale = {0.1f, 0.1f, 0.1f};      // Adjust if too big/small
+  ra.transform.rotation = {0.f, 0.f, 0.f};
+  ra.basetransform = ra.transform; //store original
+
+  ra.setParent(torsoId);
+  ra.anim = std::make_unique<AnimationController>(
+      glm::vec3(0.f),
+      glm::vec3(0.f),
+      glm::vec3(1.f)
+  );
+  ra.anim->registerKey(4, armSwingAnim);
+
+  auto raId = ra.getId();
+  gameObjects.emplace(raId, std::move(ra));
+  gameObjects.at(torsoId).addchild(raId);
 
 
   //BENCH
