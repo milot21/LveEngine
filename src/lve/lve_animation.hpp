@@ -148,22 +148,22 @@ class AnimationController {
    * every frame with delta time adn interpolation
    * blends back to its original position
    * @param dt Delta time in seconds
-   * @param outT Output translation
-   * @param outR Output rotation
-   * @param outS Output scale
+   * @param outTranslation Output translation
+   * @param outRotation Output rotation
+   * @param outScale Output scale
    */
-  void update(float dt, glm::vec3& outT, glm::vec3& outR, glm::vec3& outS) {
-    outT = origT;
-    outR = origR;
-    outS = origS;
+  void update(float dt, glm::vec3& outTranslation, glm::vec3& outRotation, glm::vec3& outScale) {
+    outTranslation = origT;
+    outRotation = origR;
+    outScale = origS;
 
     if (blending) {
       // Blending back to original state
       blendTime += dt;
       float t = std::min(blendTime / blendDur, 1.0f);
-      outT = blendT + (origT - blendT) * t;
-      outR = blendR + (origR - blendR) * t;
-      outS = blendS + (origS - blendS) * t;
+      outTranslation = blendT + (origT - blendT) * t;
+      outRotation = blendR + (origR - blendR) * t;
+      outScale = blendS + (origS - blendS) * t;
 
       if (t >= 1.0f) blending = false;
       return;
@@ -171,15 +171,15 @@ class AnimationController {
 
     if (current) {
       current->update(dt);
-      outT = current->translation;
-      outR = current->rotation;
-      outS = current->scale;
+      outTranslation = current->translation;
+      outRotation = current->rotation;
+      outScale = current->scale;
 
       if (current->done()) {
         // Animation finished, start blending back
-        blendT = outT;
-        blendR = outR;
-        blendS = outS;
+        blendT = outTranslation;
+        blendR = outRotation;
+        blendS = outScale;
         current = nullptr;
         blending = true;
         blendTime = 0.0f;

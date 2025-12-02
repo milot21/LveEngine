@@ -9,6 +9,7 @@
 // std
 #include <memory>
 #include <unordered_map>
+#include <algorithm>
 
 namespace lve {
 
@@ -23,11 +24,15 @@ struct TransformComponent {
   // Matrix corrsponds to Translate * Ry * Rx * Rz * Scale
   // Rotations correspond to Tait-bryan angles of Y(1), X(2), Z(3)
   // https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
-  glm::mat4 mat4();
+  glm::mat4 mat4() const;
+  //takes parents trans matrix and gives a combined world matrix for child to use and so on
+  glm::mat4 parentMat4(const glm::mat4& parentMatrix) const;
 
   //used to correctly transform normals for lighting calculations
   glm::mat3 normalMatrix();
 };
+
+
 
 struct PointLightComponent {
   float lightIntensity = 1.0f;  //brightness multiplier
@@ -53,7 +58,24 @@ class LveGameObject {
   LveGameObject &operator=(LveGameObject &&) = default;
 
   id_t getId() { return id; }
+  //add child to parent
+  void addchild(id_t childID) {children.push_back(childID);}
+  //remove child from its parent
+  void removeChild(id_t childID) {
+    for (auto p = children.begin(); p != children.end(); ++p) {
+      if (*p == childID) {
+        children.erase(p);
+        break;  // Found and removed, we're done
+      }
+    }
+  }
+  //list of child ids
+  const std::vector<id_t>& getChildren() const {return children;}
+  void setParent(id_t parentID) { parent = parentID;}
+  int getParent() const {return parent;}
+  bool hasParent() const {return parent != -1;}
 
+  glm::mat4 getWorldMatrix(const Map& gameObjects) const;
   glm::vec3 color{};
   TransformComponent transform{};
 
@@ -69,5 +91,7 @@ class LveGameObject {
   LveGameObject(id_t objId) : id{objId} {}
 
   id_t id; // unique identifier
+  int parent = -1; //no establish parent, if so then 1
+  std::vector<id_t> children; //list of children ids
 };
 }  // namespace lve

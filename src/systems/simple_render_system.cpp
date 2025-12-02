@@ -116,8 +116,13 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
     }
 
     SimplePushConstantData push{};
-    push.modelMatrix = obj.transform.mat4();
-    push.normalMatrix = obj.transform.normalMatrix();
+
+    //model position in the world
+    push.modelMatrix = obj.getWorldMatrix(frameInfo.gameObjects);
+
+    //rotation and scale only
+    glm::mat3 worldR= glm::mat3(push.modelMatrix);
+    push.normalMatrix = glm::transpose(glm::inverse(worldR));//
 
     vkCmdPushConstants(
         frameInfo.commandBuffer,
