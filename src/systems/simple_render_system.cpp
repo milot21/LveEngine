@@ -118,6 +118,8 @@ void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
     SimplePushConstantData push{};
 
     //model position in the world
+    //parent: combines parent world with childs local
+    //no parent: uses own transforms
     push.modelMatrix = obj.getWorldMatrix(frameInfo.gameObjects);
 
     //rotation and scale only
